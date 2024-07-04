@@ -265,6 +265,21 @@ def plot_targets_txt():
     plt.savefig("targets.jpg", dpi=200)
 
 
+def display_statistics(self, classToAmount):
+    _, width, _ = self.im.shape
+    for counter, cls in enumerate(classToAmount):
+        cv2.putText(
+            self.im,
+            f'{cls} - {classToAmount[cls]}',
+            (width - 275, (counter * 35) + 35),
+            1,
+            2,
+            (0, 255, 0),
+            2,
+            cv2.LINE_AA,
+            False)
+
+
 def plot_val_study(file="", dir="", x=None):
     """
     Plots validation study results from 'study*.txt' files in a directory or a specific file, comparing model

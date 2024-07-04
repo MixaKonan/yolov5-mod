@@ -34,6 +34,7 @@ import os
 import platform
 import sys
 from pathlib import Path
+from utils import clusterization
 
 import torch
 
@@ -96,6 +97,8 @@ def run(
     half=False,  # use FP16 half-precision inference
     dnn=False,  # use OpenCV DNN for ONNX inference
     vid_stride=1,  # video frame-rate stride
+    clusterize=False,
+    display_statistics=False
 ):
     source = str(source)
     save_img = not nosave and not source.endswith(".txt")  # save inference images
@@ -199,9 +202,12 @@ def run(
                     n = (det[:, 5] == c).sum()  # detections per class
                     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-                # Write results
-                for *xyxy, conf, cls in reversed(det):
+                boxes = det if not clusterize else clusterization.clusterize(det, im0.shape[1])
+                clsToAmount = {}
+
+                for *xyxy, conf, cls in boxes:
                     c = int(cls)  # integer class
+                    clsToAmount[names[c]] = 1 if clsToAmount.get(names[c]) is None else clsToAmount[names[c]] + 1
                     label = names[c] if hide_conf else f"{names[c]}"
                     confidence = float(conf)
                     confidence_str = f"{confidence:.2f}"
@@ -221,6 +227,9 @@ def run(
                         annotator.box_label(xyxy, label, color=colors(c, True))
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / "crops" / names[c] / f"{p.stem}.jpg", BGR=True)
+                    
+                if display_statistics:
+                    annotator.display_statistics(clsToAmount)
 
             # Stream results
             im0 = annotator.result()
@@ -295,6 +304,8 @@ def parse_opt():
     parser.add_argument("--half", action="store_true", help="use FP16 half-precision inference")
     parser.add_argument("--dnn", action="store_true", help="use OpenCV DNN for ONNX inference")
     parser.add_argument("--vid-stride", type=int, default=1, help="video frame-rate stride")
+    parser.add_argument("--clusterize", action="store_true", help="clusterize bounding boxes")
+    parser.add_argument("--display-statistics", action="store_true", help="show statistics")
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     print_args(vars(opt))
